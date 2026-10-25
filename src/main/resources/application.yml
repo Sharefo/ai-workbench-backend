@@ -4,6 +4,16 @@ server:
 spring:
   application:
     name: ai-workbench-backend
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:h2:file:./data/sqllab;MODE=MySQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: never
 
 management:
   endpoints:
@@ -13,3 +23,22 @@ management:
   endpoint:
     health:
       show-details: never
+
+sqllab:
+  max-rows: 1000
+  hard-max-rows: 5000
+  max-cells: 100000
+  query-timeout-ms: 10000
+  admin-enabled: true
+  seed:
+    scale: small
+
+llm:
+  enabled: true
+  # 默认走智谱 GLM（glm-4-flash 永久免费）。换厂商见 application-local.yml 里的模板。
+  base-url: https://open.bigmodel.cn/api/paas/v4
+  api-key: ${LLM_API_KEY:}
+  model: glm-4-flash
+  temperature: 0.1
+  timeout-ms: 120000
+  max-context-tables: 24
