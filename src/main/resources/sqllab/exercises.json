@@ -1,0 +1,167 @@
+[
+  {
+    "id": "e01",
+    "level": 1,
+    "title": "认识订单表",
+    "difficulty": "入门",
+    "description": "运营最常做的事就是「先看看这张表长什么样」。请查询订单表 orders 的前 20 条记录，只要这几列：id、order_no、status、amount、created_at。",
+    "hint": "SELECT 列名 FROM 表名 LIMIT 20",
+    "referenceSql": "SELECT id, order_no, status, amount, created_at FROM orders LIMIT 20",
+    "orderMatters": false,
+    "tags": ["SELECT", "LIMIT"]
+  },
+  {
+    "id": "e02",
+    "level": 1,
+    "title": "筛出已完成的订单",
+    "difficulty": "入门",
+    "description": "查询状态为「已完成」的订单，输出 id、order_no、amount、created_at 这四列，最多 50 条。",
+    "hint": "用 WHERE 过滤 status 字段",
+    "referenceSql": "SELECT id, order_no, amount, created_at FROM orders WHERE status = '已完成' LIMIT 50",
+    "orderMatters": false,
+    "tags": ["WHERE"]
+  },
+  {
+    "id": "e03",
+    "level": 1,
+    "title": "大额订单排行",
+    "difficulty": "入门",
+    "description": "找出金额大于 2000 的订单，输出 order_no 和 amount，按金额从高到低排序，取前 20 条。",
+    "hint": "ORDER BY amount DESC LIMIT 20",
+    "referenceSql": "SELECT order_no, amount FROM orders WHERE amount > 2000 ORDER BY amount DESC LIMIT 20",
+    "orderMatters": true,
+    "tags": ["WHERE", "ORDER BY", "LIMIT"]
+  },
+  {
+    "id": "e04",
+    "level": 2,
+    "title": "订单总量与总金额",
+    "difficulty": "基础",
+    "description": "统计订单表一共有多少笔订单、这些订单的总金额是多少。输出两列：订单数、总金额。",
+    "hint": "COUNT(*) 计数，SUM(amount) 求和",
+    "referenceSql": "SELECT COUNT(*) AS order_cnt, SUM(amount) AS total_amount FROM orders",
+    "orderMatters": false,
+    "tags": ["COUNT", "SUM"]
+  },
+  {
+    "id": "e05",
+    "level": 2,
+    "title": "各状态订单分布",
+    "difficulty": "基础",
+    "description": "按订单状态分组，统计每个状态的订单数和金额合计。输出三列：状态、订单数、金额合计，按订单数从多到少排序。",
+    "hint": "GROUP BY status，再 ORDER BY 订单数 DESC",
+    "referenceSql": "SELECT status, COUNT(*) AS cnt, SUM(amount) AS amount FROM orders GROUP BY status ORDER BY cnt DESC",
+    "orderMatters": true,
+    "tags": ["GROUP BY", "ORDER BY"]
+  },
+  {
+    "id": "e06",
+    "level": 2,
+    "title": "最近 30 天每日下单量",
+    "difficulty": "基础",
+    "description": "统计最近 30 天每天的订单数。输出两列：日期、当天订单数，按日期从小到大排序。日期可以用 CAST(created_at AS DATE) 得到。",
+    "hint": "WHERE created_at >= DATEADD('DAY', -30, CURRENT_DATE)，然后按日期分组",
+    "referenceSql": "SELECT CAST(created_at AS DATE) AS d, COUNT(*) AS cnt FROM orders WHERE created_at >= DATEADD('DAY', -30, CURRENT_DATE) GROUP BY CAST(created_at AS DATE) ORDER BY d",
+    "orderMatters": true,
+    "tags": ["日期函数", "GROUP BY"]
+  },
+  {
+    "id": "e07",
+    "level": 2,
+    "title": "各会员等级用户数",
+    "difficulty": "基础",
+    "description": "统计 users 表中每个会员等级分别有多少用户。输出两列：会员等级、用户数，按用户数从多到少排序。",
+    "hint": "GROUP BY member_level",
+    "referenceSql": "SELECT member_level, COUNT(*) AS cnt FROM users GROUP BY member_level ORDER BY cnt DESC",
+    "orderMatters": true,
+    "tags": ["GROUP BY"]
+  },
+  {
+    "id": "e08",
+    "level": 3,
+    "title": "各渠道的订单与金额",
+    "difficulty": "进阶",
+    "description": "把订单表和渠道维表连起来，统计每个渠道的订单数和金额合计。输出三列：渠道名称、订单数、金额合计，按金额合计从高到低排序。",
+    "hint": "orders o JOIN dim_channel c ON o.channel_id = c.id",
+    "referenceSql": "SELECT c.channel_name, COUNT(o.id) AS cnt, SUM(o.amount) AS amount FROM orders o JOIN dim_channel c ON o.channel_id = c.id GROUP BY c.channel_name ORDER BY amount DESC",
+    "orderMatters": true,
+    "tags": ["JOIN", "GROUP BY"]
+  },
+  {
+    "id": "e09",
+    "level": 3,
+    "title": "各类目销量与 GMV",
+    "difficulty": "进阶",
+    "description": "统计每个二级类目的销量和销售额（销售额 = 数量 × 单价 − 优惠）。输出三列：类目名称、销量、销售额，按销售额从高到低取前 20。",
+    "hint": "order_items → products → categories 三表连",
+    "referenceSql": "SELECT cat.category_name, SUM(oi.quantity) AS qty, SUM(oi.quantity * oi.unit_price - oi.discount_amount) AS gmv FROM order_items oi JOIN products p ON oi.product_id = p.id JOIN categories cat ON p.category_id = cat.id GROUP BY cat.category_name ORDER BY gmv DESC LIMIT 20",
+    "orderMatters": true,
+    "tags": ["JOIN", "聚合"]
+  },
+  {
+    "id": "e10",
+    "level": 3,
+    "title": "各城市成交额",
+    "difficulty": "进阶",
+    "description": "统计每个城市的订单金额合计。输出两列：城市、金额合计，按金额合计从高到低排序。",
+    "hint": "orders JOIN users，用 users.city 分组",
+    "referenceSql": "SELECT u.city, SUM(o.amount) AS amount FROM orders o JOIN users u ON o.user_id = u.id GROUP BY u.city ORDER BY amount DESC",
+    "orderMatters": true,
+    "tags": ["JOIN", "GROUP BY"]
+  },
+  {
+    "id": "e11",
+    "level": 3,
+    "title": "已完成订单的支付方式分布",
+    "difficulty": "进阶",
+    "description": "统计状态为「已完成」的订单，各支付方式分别有多少笔、金额合计多少。输出三列：支付方式、笔数、金额合计。",
+    "hint": "payments JOIN orders，再按 pay_method 分组",
+    "referenceSql": "SELECT p.pay_method, COUNT(*) AS cnt, SUM(p.amount) AS amount FROM payments p JOIN orders o ON p.order_id = o.id WHERE o.status = '已完成' GROUP BY p.pay_method",
+    "orderMatters": false,
+    "tags": ["JOIN", "WHERE", "GROUP BY"]
+  },
+  {
+    "id": "e12",
+    "level": 4,
+    "title": "高于平均客单价的订单有多少",
+    "difficulty": "挑战",
+    "description": "先算出所有订单的平均金额，再统计有多少笔订单的金额高于这个平均值。输出一列：订单数。要求用子查询实现，不要写死数字。",
+    "hint": "WHERE amount > (SELECT AVG(amount) FROM orders)",
+    "referenceSql": "SELECT COUNT(*) AS cnt FROM orders WHERE amount > (SELECT AVG(amount) FROM orders)",
+    "orderMatters": false,
+    "tags": ["子查询"]
+  },
+  {
+    "id": "e13",
+    "level": 4,
+    "title": "每个渠道金额最高的 3 笔订单",
+    "difficulty": "挑战",
+    "description": "在每个渠道内部按金额排名，取出各渠道金额最高的 3 笔订单。输出四列：订单号、渠道名称、金额、名次。使用窗口函数 ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...) 实现。",
+    "hint": "先在子查询里用 ROW_NUMBER() 算出 rn，外层再 WHERE rn <= 3",
+    "referenceSql": "SELECT t.order_no, t.channel_name, t.amount, t.rn FROM (SELECT o.order_no, c.channel_name, o.amount, ROW_NUMBER() OVER (PARTITION BY o.channel_id ORDER BY o.amount DESC) AS rn FROM orders o JOIN dim_channel c ON o.channel_id = c.id) t WHERE t.rn <= 3 ORDER BY t.channel_name, t.rn",
+    "orderMatters": true,
+    "tags": ["窗口函数", "子查询"]
+  },
+  {
+    "id": "e14",
+    "level": 4,
+    "title": "复购用户数",
+    "difficulty": "挑战",
+    "description": "统计下过 2 单及以上（含 2 单）的用户有多少人。输出一列：用户数。用子查询 + HAVING 实现。",
+    "hint": "先按 user_id 分组 HAVING COUNT(*) >= 2，外层再 COUNT(*)",
+    "referenceSql": "SELECT COUNT(*) AS cnt FROM (SELECT user_id FROM orders GROUP BY user_id HAVING COUNT(*) >= 2) t",
+    "orderMatters": false,
+    "tags": ["子查询", "HAVING"]
+  },
+  {
+    "id": "e15",
+    "level": 4,
+    "title": "每月订单金额趋势",
+    "difficulty": "挑战",
+    "description": "按年 + 月统计订单金额合计，用于看趋势。输出三列：年份、月份、金额合计，按年份、月份从小到大排序。",
+    "hint": "YEAR(created_at) 和 MONTH(created_at) 一起分组",
+    "referenceSql": "SELECT YEAR(created_at) AS y, MONTH(created_at) AS m, SUM(amount) AS amount FROM orders GROUP BY YEAR(created_at), MONTH(created_at) ORDER BY y, m",
+    "orderMatters": true,
+    "tags": ["日期函数", "GROUP BY"]
+  }
+]
