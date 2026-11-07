@@ -44,6 +44,17 @@ def service_up():
 SERVICE_UP = service_up()
 
 
+def reset_test_space():
+    """每次跑测试都从干净空间开始：造数测试会往空间里加表，不重置会让下一次运行的表数断言失败。"""
+    for p in [db.space_file(SPACE), db.history_file(SPACE)]:
+        if p.exists():
+            p.unlink()
+    db.ensure_space(SPACE)
+
+
+reset_test_space()
+
+
 class TestP0Skeleton(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -51,7 +62,10 @@ class TestP0Skeleton(unittest.TestCase):
 
     def test_01_内置表与样例数据(self):
         tables = db.table_summaries(SPACE)
-        self.assertEqual(len(tables), 10)
+        names = {t["name"] for t in tables}
+        self.assertEqual(len(seed.TABLE_META), 10)
+        self.assertTrue(set(seed.TABLE_META).issubset(names), "10 张内置表必须都在")
+        self.assertTrue(len(tables) >= 10)  # 允许造数测试新增的表存在
         self.assertTrue(all(t["rowCount"] > 0 for t in tables))
         self.assertTrue(all(t["sample"]["rows"] for t in tables))
         self.assertTrue(all(t["columns"] for t in tables))
@@ -243,14 +257,14 @@ class TestHTTPEndToEnd(unittest.TestCase):
         self.assertIn(b"api/ai/generate", js)
 
     def test_03_SQL接口查询与拦截(self):
-        ok = http_json("/api/sql", {"space": "demo", "sql": "SELECT * FROM users LIMIT 2;"})
+        ok = http_json("/api/sql", {"space": SPACE, "sql": "SELECT * FROM users LIMIT 2;"})
         self.assertTrue(ok["ok"])
-        bad = http_json("/api/sql", {"space": "demo", "sql": "DROP TABLE users;"})
+        bad = http_json("/api/sql", {"space": SPACE, "sql": "DROP TABLE users;"})
         self.assertTrue(bad["blocked"])
 
     def test_04_AI生成是流式的(self):
         req = urllib.request.Request(BASE + "/api/ai/generate", method="POST",
-                                     data=json.dumps({"space": "demo", "question": "统计每个城市的订单数，排前 10"}).encode(),
+                                     data=json.dumps({"space": SPACE, "question": "统计每个城市的订单数，排前 10"}).encode(),
                                      headers={"Content-Type": "application/json"})
         with urllib.request.urlopen(req, timeout=20) as r:
             self.assertIn("text/event-stream", r.headers.get("Content-Type", ""))
@@ -260,22 +274,22 @@ class TestHTTPEndToEnd(unittest.TestCase):
         self.assertTrue(json.loads([l[6:] for l in text.splitlines() if l.startswith("data: ")][-1])["verified"])
 
     def test_05_造数预览与确认执行(self):
-        r = http_json("/api/generate-data/preview", {"space": "demo", "prompt": "建一张测试表，造 300 行"})
+        r = http_json("/api/generate-data/preview", {"space": SPACE, "prompt": "建一张测试表，造 300 行"})
         self.assertTrue(r["ok"])
         plan = r["plan"]
-        r2 = http_json("/api/generate-data/execute", {"space": "demo", "plan": plan, "confirm": True})
+        r2 = http_json("/api/generate-data/execute", {"space": SPACE, "plan": plan, "confirm": True})
         self.assertTrue(r2["ok"], r2.get("message"))
         self.assertEqual(r2["rows"], 300)
 
     def test_06_题库接口与判分(self):
         qs = http_json("/api/quiz")["quizzes"]
         self.assertEqual(len(qs), 15)
-        r = http_json("/api/quiz/submit", {"space": "demo", "id": 4, "sql": "SELECT COUNT(*) FROM products;"})
+        r = http_json("/api/quiz/submit", {"space": SPACE, "id": 4, "sql": "SELECT COUNT(*) FROM products;"})
         self.assertTrue(r["passed"])
 
     def test_07_空间列表与执行记录接口(self):
         self.assertIn("demo", http_json("/api/spaces")["spaces"])
-        self.assertIn("history", http_json("/api/history?space=demo"))
+        self.assertIn("history", http_json("/api/history?space=" + SPACE))
 
 
 class TestSecurityRules(unittest.TestCase):
